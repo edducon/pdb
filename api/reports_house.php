@@ -1,53 +1,56 @@
 <?php
 // api/reports_house.php
 declare(strict_types=1);
-
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../config/db.php';
 
 $unom = isset($_GET['unom']) ? (int)$_GET['unom'] : 0;
-$days = isset($_GET['days']) ? (int)$_GET['days'] : 14;
-
-if ($unom <= 0) {
-    http_response_code(400);
-    echo json_encode(['error' => 'unom required'], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-if ($days < 1) $days = 1;
-if ($days > 60) $days = 60;
+if ($unom <= 0) { echo json_encode(['items'=>[], 'chart'=>[]]); exit; }
 
 $db = db();
 
+// 1. Список последних отчетов (Текст)
 $stmt = $db->prepare("
-  SELECT id, report_date, time_slot, status, comment, created_at
+  SELECT report_date, time_slot, status, comment
   FROM house_reports
   WHERE unom = ?
-    AND report_date >= (CURDATE() - INTERVAL ? DAY)
   ORDER BY report_date DESC, created_at DESC
-  LIMIT 200
+  LIMIT 50
 ");
-$stmt->bind_param('ii', $unom, $days);
+$stmt->bind_param('i', $unom);
 $stmt->execute();
 $res = $stmt->get_result();
-
 $items = [];
-$cnt = ['free'=>0,'medium'=>0,'full'=>0];
+while ($row = $res->fetch_assoc()) $items[] = $row;
 
-while ($row = $res->fetch_assoc()) {
-    $items[] = [
-        'id' => (int)$row['id'],
-        'report_date' => $row['report_date'],
-        'time_slot' => $row['time_slot'],
-        'status' => $row['status'],
-        'comment' => $row['comment'],
-        'created_at' => $row['created_at'],
+// 2. Данные для ГИСТОГРАММЫ (последние 7 дней)
+// Считаем % загруженности: (Full * 100 + Medium * 50) / Total
+$stmtChart = $db->prepare("
+    SELECT 
+        report_date,
+        COUNT(*) as total,
+        SUM(CASE WHEN status='full' THEN 1 ELSE 0 END) as cnt_full,
+        SUM(CASE WHEN status='medium' THEN 1 ELSE 0 END) as cnt_med,
+        SUM(CASE WHEN status='free' THEN 1 ELSE 0 END) as cnt_free
+    FROM house_reports
+    WHERE unom = ? AND report_date >= (CURDATE() - INTERVAL 6 DAY)
+    GROUP BY report_date
+    ORDER BY report_date ASC
+");
+$stmtChart->bind_param('i', $unom);
+$stmtChart->execute();
+$resChart = $stmtChart->get_result();
+$chart = [];
+while ($row = $resChart->fetch_assoc()) {
+    // Вычисляем 'индекс загруженности' от 0 до 100
+    // Если все 'full' -> 100. Если все 'free' -> 0.
+    $score = ($row['cnt_full']*100 + $row['cnt_med']*50) / $row['total'];
+    $chart[] = [
+        'date' => date('d.m', strtotime($row['report_date'])),
+        'score' => round($score),
+        'total' => $row['total']
     ];
-    if (isset($cnt[$row['status']])) $cnt[$row['status']]++;
 }
 
-echo json_encode([
-    'unom' => $unom,
-    'days' => $days,
-    'counts' => $cnt,
-    'items' => $items
-], JSON_UNESCAPED_UNICODE);
+echo json_encode(['items' => $items, 'chart' => $chart], JSON_UNESCAPED_UNICODE);
+?>

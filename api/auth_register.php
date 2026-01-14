@@ -18,7 +18,6 @@ if (mb_strlen($pass) < 4) {
     exit;
 }
 
-// Проверка на занятость логина
 $stmt = db()->prepare("SELECT id FROM users WHERE login=? LIMIT 1");
 $stmt->bind_param('s', $login);
 $stmt->execute();
@@ -33,7 +32,6 @@ $stmt = db()->prepare("INSERT INTO users (login, password_hash) VALUES (?, ?)");
 $stmt->bind_param('ss', $login, $hash);
 
 if ($stmt->execute()) {
-    // Сразу логиним
     $_SESSION['user_id'] = $stmt->insert_id;
     $_SESSION['login'] = $login;
     echo json_encode(['ok'=>true]);

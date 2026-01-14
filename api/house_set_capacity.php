@@ -27,7 +27,6 @@ if ($capacity < 0 || $capacity > 999) {
 
 $db = db();
 
-// "Upsert": Вставляем, а если уже есть запись от этого юзера - обновляем
 $stmt = $db->prepare("
     INSERT INTO house_capacity_votes (unom, user_id, capacity) 
     VALUES (?, ?, ?)

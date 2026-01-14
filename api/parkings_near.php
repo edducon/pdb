@@ -12,7 +12,6 @@ if ($unom <= 0) {
     exit;
 }
 
-// Ограничим радиус разумными пределами
 if ($r < 50) $r = 50;
 if ($r > 3000) $r = 3000;
 
@@ -32,10 +31,8 @@ if (!$house || $house['lon'] === null || $house['lat'] === null) {
 $hlon = (float)$house['lon'];
 $hlat = (float)$house['lat'];
 
-// 2. Bounding Box для грубой фильтрации (оптимизация)
-// 1 градус широты ~ 111 км.
 $degLat = $r / 111000.0;
-// Поправка на широту для долготы
+
 $degLon = $r / (111000.0 * cos(deg2rad($hlat)));
 
 $minLat = $hlat - $degLat;
@@ -43,9 +40,6 @@ $maxLat = $hlat + $degLat;
 $minLon = $hlon - $degLon;
 $maxLon = $hlon + $degLon;
 
-// 3. Выборка кандидатов
-// Мы не считаем точное расстояние в WHERE/HAVING, чтобы не мучить базу сложной математикой
-// Сделаем это на PHP - это проще и часто быстрее для небольших выборок
 $sql = "SELECT id, name, address, capacity, capacity_disabled, lon, lat, tariffs 
         FROM paid_parkings 
         WHERE lat BETWEEN ? AND ? 
@@ -63,7 +57,6 @@ while ($row = $res->fetch_assoc()) {
     $plat = (float)$row['lat'];
     $plon = (float)$row['lon'];
 
-    // Формула Haversine (расстояние на сфере)
     $earthRadius = 6371000;
     $dLat = deg2rad($plat - $hlat);
     $dLon = deg2rad($plon - $hlon);
@@ -78,7 +71,7 @@ while ($row = $res->fetch_assoc()) {
     if ($dist <= $r) {
         $items[] = [
             'id' => (int)$row['id'],
-            'name' => $row['name'], // в БД у тебя поле 'name', проверь это! В прошлом дампе было 'name', в твоем коде было 'parking_name'
+            'name' => $row['name'],
             'address' => $row['address'],
             'capacity' => $row['capacity'],
             'dist_m' => $dist,

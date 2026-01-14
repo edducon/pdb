@@ -14,7 +14,6 @@ if ($unom <= 0) {
 
 $db = db();
 
-// 1. Основные данные дома
 $stmt = $db->prepare("SELECT unom, address_full, address_simple, district, adm_area, lon, lat FROM houses WHERE unom = ? LIMIT 1");
 $stmt->bind_param('i', $unom);
 $stmt->execute();
@@ -26,8 +25,6 @@ if (!$house) {
     exit;
 }
 
-// 2. Агрегация вместимости (Считаем среднее по всем голосам)
-// ROUND(AVG(capacity)) - округляем до целого
 $stmtCap = $db->prepare("SELECT ROUND(AVG(capacity)) as avg_cap, COUNT(*) as votes_cnt FROM house_capacity_votes WHERE unom = ?");
 $stmtCap->bind_param('i', $unom);
 $stmtCap->execute();

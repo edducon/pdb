@@ -1,12 +1,22 @@
-/* app.js — Main Application Logic */
+/* app.js — Исправленная версия с защитой от ошибок карты */
 
-let map, housesCluster, parkingLayer, selectedHouseLayer;
+// Глобальные переменные карты (инициализируем null)
+let map = null;
+let housesCluster = null;
+let parkingLayer = null;
+let selectedHouseLayer = null;
+
+// Данные
 let selectedUnom = null;
 let housesHidden = false;
 let currentUserHomeUnom = null;
 
+// Модалки
 let modalLogin, modalRegister, modalProfile;
+
+// Переменная для отмены поиска (важно объявить в начале)
 let searchAbort = null;
+
 const suggestCache = new Map();
 const CACHE_TTL_MS = 2 * 60 * 1000;
 
@@ -29,12 +39,56 @@ function debounce(fn, ms){
     let t;
     return (...args) => { clearTimeout(t); t=setTimeout(() => fn(...args), ms); };
 }
+function getClusterText(id) {
+    if (id === 1) return "<span class='text-success fw-bold'>🟢 Благоприятная обстановка</span><br><small class='text-muted'>Достаточное количество мест, низкая конкуренция.</small>";
+    if (id === 2) return "<span class='text-warning fw-bold'>🟡 Затрудненная парковка</span><br><small class='text-muted'>Высокий спрос в вечернее время.</small>";
+    if (id === 3) return "<span class='text-danger fw-bold'>🔴 Критический дефицит</span><br><small class='text-muted'>Систематическая нехватка мест, плотная застройка.</small>";
+    return "<span class='text-muted'>⚪ Недостаточно данных</span><br><small class='text-muted'>Требуется сбор статистики.</small>";
+}
+
+function renderHistogram(data) {
+    if (!data || data.length === 0) return '';
+
+    // Генерируем HTML столбиков
+    let bars = data.map(d => {
+        // Цвет зависит от высоты (зеленый -> желтый -> красный)
+        let color = '#2ecc71';
+        if(d.score > 40) color = '#f1c40f';
+        if(d.score > 75) color = '#e74c3c';
+
+        return `
+            <div style="display:flex; flex-direction:column; align-items:center; flex:1;">
+                <div style="width:100%; display:flex; align-items:flex-end; height:60px; background:#ecf0f1; border-radius:4px; overflow:hidden;">
+                    <div style="width:100%; height:${d.score}%; background:${color}; transition:height 0.3s;"></div>
+                </div>
+                <div style="font-size:10px; color:#95a5a6; margin-top:4px;">${d.date}</div>
+            </div>
+        `;
+    }).join('<div style="width:4px;"></div>'); // Отступ между столбиками
+
+    return `
+        <div class="card-ui mb-3 pt-3">
+            <div class="meta-label mb-2">Динамика загруженности (7 дней)</div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+                ${bars}
+            </div>
+            <div class="text-center mt-2" style="font-size:10px; color:#bdc3c7;">0% = Свободно &nbsp; • &nbsp; 100% = Мест нет</div>
+        </div>
+    `;
+}
 
 async function apiGet(url, opts={}){
-    const r = await fetch(url, opts);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.json();
+    try {
+        const r = await fetch(url, opts);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+    } catch(e) {
+        // Игнорируем ошибки отмены (AbortError)
+        if (e.name !== 'AbortError') console.error(e);
+        throw e;
+    }
 }
+
 async function apiPost(url, body){
     const r = await fetch(url, { method:"POST", body });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -51,18 +105,23 @@ function sheetOpen(open){
 }
 
 function bboxLonLat(){
-    const b = map.getBounds();
-    const [[lat1, lon1],[lat2, lon2]] = b;
-    return [lon1,lat1,lon2,lat2].join(",");
+    // ЗАЩИТА: Если карты нет, возвращаем null
+    if (!map) return null;
+    try {
+        const b = map.getBounds();
+        const [[lat1, lon1],[lat2, lon2]] = b;
+        return [lon1,lat1,lon2,lat2].join(",");
+    } catch(e) { return null; }
 }
 
 /* Управление слоем домов */
 function toggleHousesLayer(forceState = null) {
-    const btn = $("btnShowHousesMap");
+    // ЗАЩИТА: Если кластер не создан (карта не загрузилась) — выходим, чтобы не было ошибки
+    if (!map || !housesCluster) return;
 
+    const btn = $("btnShowHousesMap");
     let wantToShow;
-    // Если forceState === null (клик по кнопке), берем ТЕКУЩЕЕ состояние housesHidden.
-    // Если скрыто (true) -> хотим показать (true).
+
     if (forceState === null) {
         wantToShow = housesHidden;
     } else {
@@ -71,21 +130,27 @@ function toggleHousesLayer(forceState = null) {
 
     if (wantToShow) { // ПОКАЗАТЬ
         housesHidden = false;
-        housesCluster.options.set('visible', true);
-        if(btn) { btn.classList.add("active"); btn.textContent = "🏠 Скрыть дома"; }
+        // Проверка перед вызовом метода
+        if (housesCluster) housesCluster.options.set('visible', true);
+        if (btn) { btn.classList.add("active"); btn.textContent = "🏠 Скрыть дома"; }
         loadHousesInView();
     } else { // СКРЫТЬ
         housesHidden = true;
-        housesCluster.removeAll();
-        housesCluster.options.set('visible', false);
-        if(btn) { btn.classList.remove("active"); btn.textContent = "🏠 Показать дома"; }
+        if (housesCluster) {
+            housesCluster.removeAll();
+            housesCluster.options.set('visible', false);
+        }
+        if (btn) { btn.classList.remove("active"); btn.textContent = "🏠 Показать дома"; }
     }
 }
 
 /* Главная функция выбора дома */
 function setSelectedHouseUI(h){
-    // Сброс состояния при смене дома
-    parkingLayer.removeAll();
+    // ЗАЩИТА: Очищаем слои только если они существуют
+    if (parkingLayer && typeof parkingLayer.removeAll === 'function') {
+        parkingLayer.removeAll();
+    }
+
     $("nearList").innerHTML = `<div id="parkPlaceholder" class="text-center text-muted small mt-4">Здесь появится список платных парковок,<br>когда вы нажмете кнопку "Парковки рядом".</div>`;
     $("nearResult").innerHTML = "—";
 
@@ -108,42 +173,53 @@ function setSelectedHouseUI(h){
     // ЛОГИКА ОТОБРАЖЕНИЯ БЛОКОВ
     if (window.__IS_LOGGED_IN__) {
         if (currentUserHomeUnom && String(currentUserHomeUnom) === String(h.unom)) {
-            // Это МОЙ дом -> Показываем ввод вместимости
             if (capBlock) capBlock.classList.remove("d-none");
             if (capInput) capInput.value = (h.my_capacity_vote !== null) ? h.my_capacity_vote : "";
         } else if (!currentUserHomeUnom) {
-            // У меня НЕТ дома в профиле -> Предлагаем этот (если смотрю чужой)
             if (callToAction) callToAction.classList.remove("d-none");
         }
-        // Если у меня уже есть дом (currentUserHomeUnom != null), то ничего не предлагаем на чужих домах.
     }
 
     const avgText = (h.courtyard_capacity !== null) ? `${h.courtyard_capacity}` : "—";
     if (avgLabel) avgLabel.textContent = avgText;
 
-    selectedHouseLayer.removeAll();
-    if (h.lat != null && h.lon != null){
-        const pm = new ymaps.Placemark([h.lat, h.lon], {
-            hintContent: "Выбран",
-            balloonContent: h.address_simple
-        }, { preset:"islands#redHomeIcon", zIndex: 10000 });
-        selectedHouseLayer.add(pm);
+    // ЗАЩИТА: Работаем с меткой только если карта и слой существуют
+    if (selectedHouseLayer && typeof ymaps !== 'undefined') {
+        selectedHouseLayer.removeAll();
+        if (h.lat != null && h.lon != null){
+            try {
+                const pm = new ymaps.Placemark([h.lat, h.lon], {
+                    hintContent: "Выбран",
+                    balloonContent: h.address_simple
+                }, { preset:"islands#redHomeIcon", zIndex: 10000 });
+                selectedHouseLayer.add(pm);
+            } catch(e) {}
+        }
     }
 
-    // При выборе дома показываем слой домов
     toggleHousesLayer(true);
-
     refreshReports().catch(()=>{});
     sheetOpen(true);
 }
 
 async function loadHousesInView(){
-    if (housesHidden) { housesCluster.removeAll(); return; }
-    if (map.getZoom() < 14){ housesCluster.removeAll(); return; }
+    // ЗАЩИТА
+    if (!map || housesHidden) return;
+    if (typeof ymaps === 'undefined') return;
 
-    const url = `../api/houses.php?bbox=${encodeURIComponent(bboxLonLat())}&limit=900`;
+    if (map.getZoom() < 14){
+        if (housesCluster) housesCluster.removeAll();
+        return;
+    }
+
+    const bbox = bboxLonLat();
+    if (!bbox) return; // Если границы не определены, выходим
+
+    const url = `../api/houses.php?bbox=${encodeURIComponent(bbox)}&limit=900`;
     try{
         const data = await apiGet(url);
+        if (!housesCluster) return;
+
         housesCluster.removeAll();
         const points = (data.items||[]).map(it => {
             const isSelected = (selectedUnom && String(selectedUnom) === String(it.unom));
@@ -158,8 +234,10 @@ async function loadHousesInView(){
             pm.properties.set('unom', it.unom);
             pm.events.add("click", async (e) => {
                 e.preventDefault();
-                const h = await apiGet(`../api/house.php?unom=${it.unom}`);
-                setSelectedHouseUI(h);
+                try {
+                    const h = await apiGet(`../api/house.php?unom=${it.unom}`);
+                    setSelectedHouseUI(h);
+                } catch(e) { toast("Ошибка загрузки данных"); }
             });
             return pm;
         });
@@ -169,8 +247,9 @@ async function loadHousesInView(){
 
 async function showPaidParkingsNear(){
     if (!selectedUnom){ toast("Сначала выбери дом"); return; }
-    const r = $("radius").value;
+    if (!map) { toast("Карта еще не загружена"); return; }
 
+    const r = $("radius").value;
     const btnHouses = $("btnShowHousesMap");
     if(btnHouses) btnHouses.style.display = "block";
 
@@ -180,7 +259,7 @@ async function showPaidParkingsNear(){
         const data = await apiGet(`../api/parkings_near.php?unom=${selectedUnom}&r=${r}`);
         $("nearResult").innerHTML = `<span class="text-muted">Найдено:</span> <b>${data.x2_paid_cnt}</b>`;
 
-        parkingLayer.removeAll();
+        if (parkingLayer) parkingLayer.removeAll();
         const list = $("nearList");
         list.innerHTML = "";
 
@@ -193,11 +272,13 @@ async function showPaidParkingsNear(){
         }
 
         (data.items||[]).forEach((p, idx) => {
-            const pm = new ymaps.Placemark([p.lat, p.lon], {
-                balloonContentHeader: p.name,
-                balloonContentBody: `Мест: ${p.capacity || "?"}`
-            }, { preset: "islands#orangeIcon", zIndex: 9999 });
-            parkingLayer.add(pm);
+            if (map && parkingLayer) {
+                const pm = new ymaps.Placemark([p.lat, p.lon], {
+                    balloonContentHeader: p.name,
+                    balloonContentBody: `Мест: ${p.capacity || "?"}`
+                }, { preset: "islands#orangeIcon", zIndex: 9999 });
+                parkingLayer.add(pm);
+            }
             const div = document.createElement("div");
             div.className = "item";
             div.innerHTML = `
@@ -205,7 +286,10 @@ async function showPaidParkingsNear(){
                 <div class="s">${p.address || ""}</div>
                 <div class="s">~${p.dist_m} м • мест: ${p.capacity ?? "—"}</div>
             `;
-            div.onclick = () => map.setCenter([p.lat, p.lon], Math.max(map.getZoom(), 16), {duration:300});
+            div.onclick = () => {
+                if (map && typeof map.setCenter === 'function')
+                    map.setCenter([p.lat, p.lon], Math.max(map.getZoom(), 16), {duration:300});
+            };
             list.appendChild(div);
         });
         toast(`Найдено ${data.items.length} парковок`);
@@ -223,7 +307,7 @@ function createSuggestItem(it, onClick) {
     return d;
 }
 
-async function liveSearchProfile(){
+const doLiveSearchProfile = debounce(async () => {
     const q = $("profileSearchInput").value.trim();
     const box = $("profileSuggest");
     if(q.length<3){ box.classList.add("d-none"); return; }
@@ -241,41 +325,75 @@ async function liveSearchProfile(){
         });
         box.classList.remove("d-none");
     }catch(e){}
-}
-const doLiveSearchProfile = debounce(liveSearchProfile, 500);
+}, 500);
 
-async function liveSearch(){
+const doLiveSearch = debounce(async () => {
     const q = $("searchInput").value.trim();
     const box = $("searchSuggest");
     if(q.length<3){ box.classList.add("d-none"); return; }
-    if(searchAbort)searchAbort.abort(); searchAbort=new AbortController();
+
+    if(searchAbort) searchAbort.abort();
+    searchAbort = new AbortController();
+
     try{
-        const data=await apiGet(`../api/search.php?q=${encodeURIComponent(q)}`,{signal:searchAbort.signal});
+        const r = await fetch(`../api/search.php?q=${encodeURIComponent(q)}`, {signal: searchAbort.signal});
+        if (!r.ok) return;
+        const data = await r.json();
+
         const items = data.items || [];
         box.innerHTML = "";
         if (!items.length){ box.classList.add("d-none"); return; }
         items.forEach(it => {
             box.appendChild(createSuggestItem(it, async () => {
                 box.classList.add("d-none");
-                const h = await apiGet(`../api/house.php?unom=${it.unom}`);
-                if(it.lat) map.setCenter([it.lat,it.lon], 17);
-                setSelectedHouseUI(h);
+                try {
+                    const h = await apiGet(`../api/house.php?unom=${it.unom}`);
+                    // ЗАЩИТА: Если карты нет, просто показываем инфо
+                    if(it.lat && map && typeof map.setCenter === 'function')
+                        map.setCenter([it.lat,it.lon], 17);
+                    setSelectedHouseUI(h);
+                } catch(e){}
             }));
         });
         box.classList.remove("d-none");
-    }catch(e){}
-}
-const doLiveSearch = debounce(liveSearch, 500);
+    }catch(e){
+        if (e.name !== 'AbortError') console.error(e);
+    }
+}, 500);
 
 function statusLabel(s){ if (s === "free") return "<span class='text-success'>Свободно</span>"; if (s === "medium") return "<span class='text-warning'>Средне</span>"; return "<span class='text-danger'>Мест нет</span>"; }
 function slotLabel(s){ const m = {morning:"Утро", day:"День", evening:"Вечер", night:"Ночь"}; return m[s] || s; }
 async function refreshReports(){
-    const box = $("reportsBox"); if (!box) return; if (!selectedUnom){ box.innerHTML = ``; return; }
-    const data = await apiGet(`../api/reports_house.php?unom=${selectedUnom}&days=14`);
-    const items = data.items || [];
-    if (!items.length){ box.innerHTML = `<div class="small text-muted p-2">Пока нет отметок.</div>`; return; }
-    let html = items.map(it => `<div class="item"><div class="t">${it.report_date} • ${slotLabel(it.time_slot)}</div><div class="s">Статус: ${statusLabel(it.status)}</div>${it.comment ? `<div class="s text-dark mt-1">"${it.comment}"</div>` : ""}</div>`).join("");
-    box.innerHTML = html;
+    const box = $("reportsBox");
+    if(!box || !selectedUnom) return;
+
+    try {
+        const data = await apiGet(`../api/reports_house.php?unom=${selectedUnom}&days=14`);
+
+        // 1. Сначала рисуем график (если есть данные)
+        let html = renderHistogram(data.chart);
+
+        // 2. Потом список последних отзывов
+        if(!data.items.length) {
+            html += "<div class='text-muted p-2'>Нет текстовых отметок</div>";
+        } else {
+            html += `<div class="meta-label mt-3 mb-2">Лента событий</div>`;
+            html += data.items.map(it => `
+                <div class="item" style="border-left: 3px solid ${it.status==='free'?'#2ecc71':(it.status==='full'?'#e74c3c':'#f1c40f')}; padding-left:10px;">
+                    <div class="d-flex justify-content-between">
+                        <div class="t small">${it.report_date}</div>
+                        <div class="s small text-uppercase">${it.time_slot}</div>
+                    </div>
+                    ${it.comment ? `<div class="text-dark mt-1" style="font-size:13px;">${it.comment}</div>` : "<div class='s'>Без комментария</div>"}
+                </div>
+            `).join("");
+        }
+
+        box.innerHTML = html;
+    } catch(e){
+        console.error(e);
+        box.innerHTML = `<div class="text-danger small">Ошибка загрузки истории</div>`;
+    }
 }
 async function submitReport(){
     if (!selectedUnom){ toast("Сначала выбери дом"); return; }
@@ -288,15 +406,12 @@ async function ajaxRegister(l, p){ const fd = new FormData(); fd.append("login",
 async function ajaxLogout(){ return apiGet("../api/auth_logout.php"); }
 async function profileGet(){ return apiGet("../api/profile_get.php"); }
 async function profileSetHome(u){ const fd = new FormData(); if (u===null) fd.append("home_unom",""); else fd.append("home_unom", String(u)); return apiPost("../api/profile_set_home.php", fd); }
-async function profileChangePassword(p){ return fetch('../api/profile_update.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ new_password: p }) }).then(r => r.json()); }
 
-// --- RENDER PROFILE STATE ---
 function renderProfileState(homeUnom) {
     const blockAdd = $("profileAddHomeBlock");
     const blockExist = $("profileExistingHomeBlock");
 
     if (homeUnom) {
-        // Дом есть
         if(blockAdd) blockAdd.classList.add("d-none");
         if(blockExist) {
             blockExist.classList.remove("d-none");
@@ -310,7 +425,6 @@ function renderProfileState(homeUnom) {
                 });
         }
     } else {
-        // Дома нет
         if(blockExist) blockExist.classList.add("d-none");
         if(blockAdd) {
             blockAdd.classList.remove("d-none");
@@ -321,9 +435,11 @@ function renderProfileState(homeUnom) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    modalLogin = new bootstrap.Modal($("modalLogin"));
-    modalRegister = new bootstrap.Modal($("modalRegister"));
-    modalProfile = new bootstrap.Modal($("modalProfile"));
+    // Инициализация модалок
+    const elL = $("modalLogin"), elR = $("modalRegister"), elP = $("modalProfile");
+    if(elL) modalLogin = new bootstrap.Modal(elL);
+    if(elR) modalRegister = new bootstrap.Modal(elR);
+    if(elP) modalProfile = new bootstrap.Modal(elP);
 
     if (window.__IS_LOGGED_IN__) {
         profileGet().then(p => {
@@ -340,6 +456,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try{
             const p = await profileGet();
             renderProfileState(p.home_unom);
+            if ($("profileLogin")) $("profileLogin").value = p.login || "";
         }catch(e){ toast("Ошибка профиля"); }
         modalProfile.show();
     };
@@ -355,9 +472,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
             const h = await apiGet(`../api/house.php?unom=${p.home_unom}`);
-            if (h.lat != null && h.lon != null) map.setCenter([h.lat,h.lon], 17, {duration:300});
+
+            if (h.lat != null && h.lon != null && map && typeof map.setCenter === 'function') {
+                map.setCenter([h.lat,h.lon], 17, {duration:300});
+            } else if (!map) {
+                toast("Данные загружены (карта не готова)");
+            }
+
+            // Интерфейс обновляем в любом случае
             setSelectedHouseUI(h);
-            toast("Мой дом");
         }catch(e){ toast("Ошибка"); }
     };
 
@@ -422,8 +545,28 @@ document.addEventListener("DOMContentLoaded", () => {
         }catch(e){ toast("Ошибка"); }
     };
 
-    const btnChangePass = $("btnChangePass");
-    if (btnChangePass) btnChangePass.onclick = async () => { const newPass = prompt("Новый пароль:"); if (!newPass) return; try { const res = await profileChangePassword(newPass); if(res.ok) { toast("ОК"); modalProfile.hide(); } else toast("Ошибка"); } catch(e){} };
+    const btnSaveCreds = $("btnSaveProfileCreds");
+    if (btnSaveCreds) {
+        btnSaveCreds.onclick = async () => {
+            const l = $("profileLogin").value.trim();
+            const p = $("profilePass").value.trim();
+            try {
+                const res = await fetch('../api/profile_update.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ new_login: l, new_password: p })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    toast("Данные обновлены");
+                    $("profilePass").value = "";
+                } else {
+                    toast(data.error || "Ошибка");
+                }
+            } catch(e) { toast("Ошибка сети"); }
+        };
+    }
+
     const btnCap = $("btnSaveCapacity");
     if (btnCap) btnCap.onclick = async () => { if (!selectedUnom) return; const val = $("houseCapacityInput").value.trim(); if (val === "") return; try { const res = await apiPost('../api/house_set_capacity.php', JSON.stringify({ unom: selectedUnom, capacity: parseInt(val) })); if (res.ok) { toast("Принято"); const h = await apiGet(`../api/house.php?unom=${selectedUnom}`); setSelectedHouseUI(h); } else toast("Ошибка"); } catch (e){} };
 
@@ -443,14 +586,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-ymaps.ready(() => {
-    map = new ymaps.Map("map", { center:[55.751244, 37.618423], zoom:12, controls:["zoomControl","geolocationControl"] });
-    housesCluster = new ymaps.Clusterer({ preset:"islands#invertedBlueClusterIcons", groupByCoordinates:false, gridSize: 80 });
-    parkingLayer = new ymaps.GeoObjectCollection();
-    selectedHouseLayer = new ymaps.GeoObjectCollection();
-    map.geoObjects.add(housesCluster); map.geoObjects.add(parkingLayer); map.geoObjects.add(selectedHouseLayer);
-    toggleHousesLayer(true);
-    map.events.add("boundschange", debounce(loadHousesInView, 400));
-    map.events.add("click", () => { $("searchSuggest").classList.add("d-none"); });
-});
+function initMap() {
+    if (typeof ymaps === 'undefined') {
+        setTimeout(initMap, 100);
+        return;
+    }
+    ymaps.ready(() => {
+        map = new ymaps.Map("map", { center:[55.751244, 37.618423], zoom:12, controls:["zoomControl","geolocationControl"] });
+        housesCluster = new ymaps.Clusterer({ preset:"islands#invertedBlueClusterIcons", groupByCoordinates:false, gridSize: 80 });
+        parkingLayer = new ymaps.GeoObjectCollection();
+        selectedHouseLayer = new ymaps.GeoObjectCollection();
+        map.geoObjects.add(housesCluster); map.geoObjects.add(parkingLayer); map.geoObjects.add(selectedHouseLayer);
+        toggleHousesLayer(true);
+        map.events.add("boundschange", debounce(loadHousesInView, 400));
+        map.events.add("click", () => { $("searchSuggest").classList.add("d-none"); });
+    });
+}
+initMap();
+
 document.addEventListener("click", (e) => { const t = e.target.closest(".tab"); if (!t) return; document.querySelectorAll(".tab").forEach(x => x.classList.remove("active")); document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active")); t.classList.add("active"); const pane = document.getElementById(t.dataset.tab); if (pane) pane.classList.add("active"); });

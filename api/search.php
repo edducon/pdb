@@ -1,5 +1,4 @@
 <?php
-// api/search.php
 declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');

@@ -18,10 +18,10 @@ require_once __DIR__ . '/../config/auth.php';
         <div class="row align-items-center g-2">
             <div class="col-12 col-lg-auto">
                 <a class="brand d-flex align-items-center gap-2 text-decoration-none" href="index.php">
-                    <img src="assets/logo.svg" width="34" height="34" alt="">
+                    <img src="assets/logo.svg" width="64" height="64" alt="">
                     <div class="lh-sm">
                         <div class="brand-title">Парковки у дома</div>
-                        <div class="brand-subtitle">Платные парковки рядом + пользовательские отметки</div>
+                        <div class="brand-subtitle">Сервис доступности парковочных мест</div>
                     </div>
                 </a>
             </div>
@@ -98,7 +98,6 @@ require_once __DIR__ . '/../config/auth.php';
         <div class="sheet-body">
             <div id="tab-park" class="tab-pane active">
                 <div id="nearList" class="list">
-                    <!-- Заглушка теперь внутри -->
                     <div id="parkPlaceholder" class="text-center text-muted small mt-4">
                         Здесь появится список платных парковок,<br>когда вы нажмете кнопку "Парковки рядом".
                     </div>
@@ -245,12 +244,22 @@ require_once __DIR__ . '/../config/auth.php';
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
             </div>
             <div class="modal-body">
-                <div class="small text-muted mb-3">Логин: <b class="text-dark"><?= htmlspecialchars($_SESSION['login'] ?? '—') ?></b></div>
+
+                <div class="card-ui bg-light border-0 mb-3 p-3">
+                    <div class="meta-label mb-2">Учетная запись</div>
+
+                    <label class="form-label small text-muted mb-1">Ваш Логин</label>
+                    <input id="profileLogin" class="form-control form-control-sm mb-2" value="<?= htmlspecialchars($_SESSION['login'] ?? '') ?>">
+
+                    <label class="form-label small text-muted mb-1">Новый пароль (пусто, если не меняете)</label>
+                    <input id="profilePass" type="password" class="form-control form-control-sm mb-2" placeholder="********">
+
+                    <button id="btnSaveProfileCreds" class="btn btn-primary btn-sm w-100 mt-1">Сохранить изменения</button>
+                </div>
 
                 <div class="card-ui bg-light border-0 mb-3">
                     <div class="meta-label mb-2">Домашний адрес</div>
 
-                    <!-- Режим: Адрес НЕ задан (форма добавления) -->
                     <div id="profileAddHomeBlock">
                         <div class="position-relative">
                             <input id="profileSearchInput" class="form-control mb-2" placeholder="Начните вводить адрес...">
@@ -259,17 +268,11 @@ require_once __DIR__ . '/../config/auth.php';
                         <input id="profileHomeUnom" type="hidden">
 
                         <div class="d-flex gap-2">
-                            <button id="btnSaveHome" class="btn btn-accent flex-grow-1">Сохранить</button>
-                            <button id="btnUseSelectedHouse" class="btn btn-outline-secondary" title="Взять выбранный на карте">
-                                📍 С карты
-                            </button>
-                        </div>
-                        <div class="small text-muted mt-2" style="font-size: 11px; line-height: 1.3;">
-                            Найдите дом через поиск или выберите на карте и нажмите кнопку "📍".
+                            <button id="btnSaveHome" class="btn btn-accent flex-grow-1">Сохранить адрес</button>
+                            <button id="btnUseSelectedHouse" class="btn btn-outline-secondary" title="Взять выбранный на карте">📍</button>
                         </div>
                     </div>
 
-                    <!-- Режим: Адрес ЗАДАН (инфо + удаление) -->
                     <div id="profileExistingHomeBlock" class="d-none">
                         <div class="d-flex align-items-center gap-2 mb-3">
                             <div class="fs-5">🏠</div>
@@ -277,12 +280,8 @@ require_once __DIR__ . '/../config/auth.php';
                         </div>
                         <button id="btnClearHome" class="btn btn-outline-danger btn-sm w-100">Удалить домашний адрес</button>
                     </div>
-
                 </div>
 
-                <div class="d-grid gap-2">
-                    <button id="btnChangePass" class="btn btn-outline-secondary btn-sm">Сменить пароль</button>
-                </div>
             </div>
         </div>
     </div>
@@ -291,7 +290,8 @@ require_once __DIR__ . '/../config/auth.php';
 <div id="toast" class="toast-ui d-none">…</div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey=00ca3c1c-0712-4705-be5b-7b89cf700e49"></script>
+<script src="https://api-maps.yandex.ru/2.1/?apikey=9e226a60-c4ba-4fd7-a1ba-eb528cb89743&lang=ru_RU" async defer></script>
+
 <script>
     window.__IS_LOGGED_IN__ = <?= is_logged_in() ? 'true' : 'false' ?>;
 </script>

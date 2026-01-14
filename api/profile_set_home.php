@@ -9,7 +9,6 @@ $userId = (int)$_SESSION['user_id'];
 $home = trim((string)($_POST['home_unom'] ?? ''));
 
 if ($home === '') {
-    // удалить домашний адрес
     $stmt = db()->prepare("UPDATE users SET home_unom=NULL WHERE id=?");
     $stmt->bind_param('i', $userId);
     $stmt->execute();
@@ -24,7 +23,6 @@ if (!preg_match('/^\d{1,20}$/', $home)) {
 
 $unom = (int)$home;
 
-// проверим, что дом существует
 $stmt0 = db()->prepare("SELECT unom FROM houses WHERE unom=? LIMIT 1");
 $stmt0->bind_param('i', $unom);
 $stmt0->execute();

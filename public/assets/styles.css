@@ -1,12 +1,6 @@
-/*
- * styles.css
- * Основные стили проекта.
- */
-
 :root {
-    /* Палитра (Комплементарная схема) */
-    --color-primary: #2c3e50;    /* Темно-синий */
-    --color-accent: #f39c12;     /* Янтарный */
+    --color-primary: #2c3e50;
+    --color-accent: #f39c12;
     --color-bg: #f4f6f7;
     --color-surface: #ffffff;
     --color-text: #333333;
@@ -25,7 +19,6 @@ body.app {
     margin: 0;
 }
 
-/* --- Header --- */
 .topbar {
     background: var(--color-surface);
     padding: 10px 0;
@@ -85,7 +78,6 @@ body.app {
 }
 .suggest-item:hover { background: #f9f9f9; color: var(--color-accent); }
 
-/* Кнопки */
 .btn-ui {
     background: #ecf0f1; color: var(--color-text);
     border: none; font-weight: 500; font-size: 14px;
@@ -102,7 +94,6 @@ body.app {
 
 .microhint { font-size: 11px; color: #999; text-align: center; }
 
-/* --- Layout: Карта и Панель --- */
 .map-root {
     flex-grow: 1;
     position: relative;
@@ -117,11 +108,10 @@ body.app {
     z-index: 1;
 }
 
-/* Плавающие кнопки на карте */
 .map-controls-overlay {
     position: absolute;
     top: 20px;
-    left: 10px; /* На мобилках слева */
+    left: 10px;
     z-index: 1000;
     display: flex;
     flex-direction: column;
@@ -129,11 +119,10 @@ body.app {
 }
 @media (min-width: 992px) {
     .map-controls-overlay {
-        left: 60px; /* Чтобы не перекрывать зум, если он слева */
+        left: 60px;
     }
 }
 
-/* Нижняя панель (BottomSheet) */
 .sheet {
     position: absolute;
     bottom: 0; left: 0; right: 0;
@@ -149,14 +138,13 @@ body.app {
 }
 .sheet.open { transform: translateY(0); }
 
-/* Десктоп: Золотое сечение */
 @media (min-width: 992px) {
     .map-root { flex-direction: row; }
 
     .sheet {
         position: relative;
         transform: none;
-        width: 38.2%; /* Золотое сечение */
+        width: 38.2%;
         height: 100%;
         max-height: none;
         border-radius: 0;
@@ -220,7 +208,6 @@ body.app {
 
 .card-modal { border-radius: var(--radius); border: none; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
 
-/* Toast: По центру сверху */
 .toast-ui {
     position: fixed;
     top: 30px;
@@ -260,15 +247,24 @@ body.app {
     background: #f1f1f1;
 }
 ::-webkit-scrollbar-thumb {
-    background: #f5cba7; /* Светло-оранжевый */
+    background: #f5cba7;
     border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--color-accent); /* Наш янтарный */
+    background: var(--color-accent);
 }
 
-/* Firefox */
 * {
     scrollbar-width: thin;
     scrollbar-color: var(--color-accent) #f1f1f1;
+}
+
+.sheet-body {
+    padding-bottom: 80px;
+}
+
+@media (max-width: 991px) {
+    .sheet-body {
+        padding-bottom: 100px;
+    }
 }
