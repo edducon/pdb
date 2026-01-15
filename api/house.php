@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../config/db.php';
-require_once __DIR__ . '/../config/auth.php'; // Для сессии
+require_once __DIR__ . '/../config/auth.php';
 
 $unom = isset($_GET['unom']) ? (int)$_GET['unom'] : 0;
 if ($unom <= 0) {
@@ -13,8 +13,19 @@ if ($unom <= 0) {
 }
 
 $db = db();
+$today = date('Y-m-d');
 
-$stmt = $db->prepare("SELECT unom, address_full, address_simple, district, adm_area, lon, lat FROM houses WHERE unom = ? LIMIT 1");
+$sql = "
+    SELECT 
+        h.unom, h.address_full, h.address_simple, h.district, h.adm_area, h.lon, h.lat,
+        d.cluster_id 
+    FROM houses h
+    LEFT JOIN daily_house_features d ON h.unom = d.unom AND d.date = '$today'
+    WHERE h.unom = ? 
+    LIMIT 1
+";
+
+$stmt = $db->prepare($sql);
 $stmt->bind_param('i', $unom);
 $stmt->execute();
 $house = $stmt->get_result()->fetch_assoc();
@@ -33,7 +44,6 @@ $capRow = $stmtCap->get_result()->fetch_assoc();
 $house['courtyard_capacity'] = $capRow['avg_cap'] !== null ? (int)$capRow['avg_cap'] : null;
 $house['capacity_votes'] = (int)$capRow['votes_cnt'];
 
-// 3. Если пользователь авторизован, узнаем, голосовал ли он сам
 $user_val = null;
 if (is_logged_in()) {
     $uid = $_SESSION['user_id'];
@@ -45,10 +55,10 @@ if (is_logged_in()) {
 }
 $house['my_capacity_vote'] = $user_val;
 
-
-// Приведение типов координат
 $house['unom'] = (int)$house['unom'];
 $house['lon'] = $house['lon'] ? (float)$house['lon'] : null;
 $house['lat'] = $house['lat'] ? (float)$house['lat'] : null;
+$house['cluster_id'] = $house['cluster_id'] ? (int)$house['cluster_id'] : null;
 
 echo json_encode($house, JSON_UNESCAPED_UNICODE);
+?>
