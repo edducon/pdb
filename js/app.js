@@ -525,13 +525,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const formRegister = $("formRegister");
     if(formRegister) formRegister.addEventListener("submit", async (ev) => {
-        ev.preventDefault(); $("regErr").classList.add("d-none");
+        ev.preventDefault();
+        $("regErr").classList.add("d-none");
+
+        const consent = $("regConsent");
+        if (consent && !consent.checked) {
+            $("regErr").textContent = "Для регистрации необходимо согласие на обработку данных";
+            $("regErr").classList.remove("d-none");
+            return;
+        }
+
         const fd = new FormData(ev.target);
         try{
             const res = await ajaxRegister(String(fd.get("login")), String(fd.get("password")));
-            if (!res.ok){ $("regErr").textContent = res.error || "Ошибка"; $("regErr").classList.remove("d-none"); return; }
-            modalRegister.hide(); await ajaxLogin(String(fd.get("login")), String(fd.get("password"))); setAuthUI(true);
-        }catch(e){ $("regErr").classList.remove("d-none"); }
+            if (!res.ok){
+                $("regErr").textContent = res.error || "Ошибка";
+                $("regErr").classList.remove("d-none");
+                return;
+            }
+            modalRegister.hide();
+            await ajaxLogin(String(fd.get("login")), String(fd.get("password")));
+            setAuthUI(true);
+        }catch(e){
+            $("regErr").textContent = "Ошибка сети";
+            $("regErr").classList.remove("d-none");
+        }
     });
 
     $("linkToRegister").onclick = (e) => { e.preventDefault(); modalLogin.hide(); modalRegister.show(); };

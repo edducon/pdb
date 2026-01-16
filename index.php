@@ -225,6 +225,13 @@ require_once __DIR__ . '/config/auth.php';
                     <input name="login" class="form-control" required>
                     <label class="form-label mt-3 text-muted small">Придумайте Пароль</label>
                     <input name="password" type="password" class="form-control" required>
+                    <div class="form-check mt-3">
+                        <input class="form-check-input" type="checkbox" id="regConsent" required>
+                        <label class="form-check-label small text-muted lh-sm" for="regConsent" style="font-size: 11px;">
+                            Я согласен на обработку
+                            <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#modalPrivacy">персональных данных</a>
+                        </label>
+                    </div>
                     <button class="btn btn-accent w-100 mt-4">Создать аккаунт</button>
                 </form>
                 <div class="small text-muted mt-3 text-center">
@@ -235,7 +242,48 @@ require_once __DIR__ . '/config/auth.php';
     </div>
 </div>
 
-<!-- PROFILE MODAL -->
+<div class="modal fade" id="modalPrivacy" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content card-modal">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Политика конфиденциальности</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+            </div>
+            <div class="modal-body text-muted" style="font-size: 13px; line-height: 1.6;">
+                <p><strong>1. Общие положения</strong><br>
+                    Настоящая политика описывает, как сервис «Парковки у дома» собирает, использует и защищает информацию пользователей.</p>
+
+                <p><strong>2. Какие данные мы собираем</strong><br>
+                    Для функционирования сервиса мы обрабатываем следующие данные:
+                <ul class="ps-3 mb-2">
+                    <li><strong>Логин:</strong> используется для идентификации пользователя в системе.</li>
+                    <li><strong>Пароль:</strong> хранится в базе данных исключительно в зашифрованном виде (хэш). Администрация не имеет доступа к исходным паролям.</li>
+                    <li><strong>IP-адрес:</strong> используется в целях безопасности для предотвращения накруток голосов и защиты от спам-атак (механизм Anti-Fraud).</li>
+                    <li><strong>Cookie-файлы:</strong> используются для поддержания сессии авторизации.</li>
+                </ul>
+                </p>
+
+                <p><strong>3. Цели обработки</strong><br>
+                    Мы используем данные исключительно для:
+                <ul class="ps-3 mb-2">
+                    <li>Предоставления доступа к личному кабинету;</li>
+                    <li>Обеспечения честного голосования за доступность парковок;</li>
+                    <li>Анализа статистики загруженности парковочных мест.</li>
+                </ul>
+                </p>
+
+                <p><strong>4. Защита информации</strong><br>
+                    Мы принимаем необходимые меры для защиты данных от несанкционированного доступа. Мы не передаем ваши данные третьим лицам, за исключением случаев, предусмотренных законодательством РФ.</p>
+
+                <p class="mb-0"><em>Регистрируясь на сайте, вы подтверждаете свое согласие с данными условиями.</em></p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button class="btn btn-accent btn-sm w-100" data-bs-target="#modalRegister" data-bs-toggle="modal">Понятно</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="modalProfile" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content card-modal">
