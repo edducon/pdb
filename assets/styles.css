@@ -134,7 +134,7 @@ body.app {
     transition: transform 0.3s cubic-bezier(0.1, 0.7, 0.1, 1);
     max-height: 85vh;
     display: flex; flex-direction: column;
-    transform: translateY(calc(100% - 60px)); /* Свернуто */
+    transform: translateY(calc(100% - 60px));
 }
 .sheet.open { transform: translateY(0); }
 
