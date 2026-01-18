@@ -105,6 +105,7 @@ require_once __DIR__ . '/config/auth.php';
             </div>
 
             <div id="tab-reports" class="tab-pane">
+
                 <div id="capacityBlock" class="card-ui mb-3 bg-light border-0 d-none">
                     <div class="meta-label text-primary">Мой дом: Вместимость двора</div>
                     <div class="row g-2 align-items-end mt-1">
@@ -126,23 +127,25 @@ require_once __DIR__ . '/config/auth.php';
                     </div>
                 </div>
 
+                <?php if (!is_logged_in()): ?>
+                    <div class="card-ui mb-3 bg-light border-0">
+                        <div class="small text-muted text-center py-2" style="font-size: 13px;">
+                            Хотите влиять на рейтинг вместимости? <br>
+                            <a href="#" class="fw-bold text-decoration-none" onclick="modalLogin.show(); return false;">Войдите</a> и укажите домашний адрес.
+                        </div>
+                    </div>
+                <?php endif; ?>
+
                 <div class="card-ui mb-3 border-0">
                     <div class="d-flex justify-content-between align-items-center">
                         <span class="small text-muted">Средняя оценка жильцов:</span>
                         <span id="avgCapacityVal" class="badge bg-secondary fs-6">?</span>
                     </div>
-                    <span id="avgCapacityValAnon" class="d-none"></span>
                 </div>
 
                 <div class="card-ui">
                     <div class="meta-label">Оставить отметку заполненности</div>
                     <div class="small text-muted mb-2">Ваши данные помогают соседям ориентироваться.</div>
-
-                    <?php if (!is_logged_in()): ?>
-                        <div class="alert alert-warning py-2 small">
-                            <a href="#" onclick="modalLogin.show(); return false;">Войдите</a>, чтобы оставлять отметки.
-                        </div>
-                    <?php endif; ?>
 
                     <div class="row g-2 mt-1">
                         <div class="col-6">
@@ -183,6 +186,10 @@ require_once __DIR__ . '/config/auth.php';
     </section>
 
     <div id="toast" class="toast-ui d-none">…</div>
+    <div style="position: absolute; top: 10px; right: 10px; z-index: 1015; font-size: 10px; background: rgba(255,255,255,0.9); padding: 4px 8px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        На основе датасетов: <a href="https://data.mos.ru/opendata/60562" target="_blank" style="color:#333; text-decoration: underline;">Реестр домов</a>,
+        <a href="https://data.mos.ru/opendata/623" target="_blank" style="color:#333; text-decoration: underline;">Парковки</a>
+    </div>
 </main>
 
 <!-- LOGIN MODAL -->
