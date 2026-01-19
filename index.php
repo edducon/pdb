@@ -31,7 +31,7 @@ require_once __DIR__ . '/config/auth.php';
                     <div class="ic" aria-hidden="true">
                         <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M10 18a8 8 0 1 1 5.3-14A8 8 0 0 1 10 18Zm11 3-6-6 1.4-1.4 6 6L21 21Z"/></svg>
                     </div>
-                    <input id="searchInput" class="search-input" placeholder="Введите адрес дома (минимум 3 символа)…">
+                    <input id="searchInput" class="search-input" placeholder="Введите адрес дома…">
                     <button id="searchBtn" class="btn btn-accent btn-sm px-3 ms-2">Найти</button>
                 </div>
                 <div id="searchSuggest" class="suggest d-none"></div>
@@ -99,7 +99,7 @@ require_once __DIR__ . '/config/auth.php';
             <div id="tab-park" class="tab-pane active">
                 <div id="nearList" class="list">
                     <div id="parkPlaceholder" class="text-center text-muted small mt-4">
-                        Здесь появится список платных парковок,<br>когда вы нажмете кнопку "Парковки рядом".
+                        Здесь появится список платных парковок.
                     </div>
                 </div>
             </div>
@@ -138,14 +138,14 @@ require_once __DIR__ . '/config/auth.php';
 
                 <div class="card-ui mb-3 border-0">
                     <div class="d-flex justify-content-between align-items-center">
-                        <span class="small text-muted">Средняя оценка жильцов:</span>
+                        <span class="small text-muted">Средняя количество парковочных мест:</span>
                         <span id="avgCapacityVal" class="badge bg-secondary fs-6">?</span>
                     </div>
                 </div>
 
                 <div class="card-ui">
-                    <div class="meta-label">Оставить отметку заполненности</div>
-                    <div class="small text-muted mb-2">Ваши данные помогают соседям ориентироваться.</div>
+                    <div class="meta-label">Оставить отметку заполненности парковочных мест</div>
+                    <div class="small text-muted mb-2">Ваши данные помогают людям ориентироваться.</div>
 
                     <div class="row g-2 mt-1">
                         <div class="col-6">
@@ -306,7 +306,7 @@ require_once __DIR__ . '/config/auth.php';
                     <label class="form-label small text-muted mb-1">Ваш Логин</label>
                     <input id="profileLogin" class="form-control form-control-sm mb-2" value="<?= htmlspecialchars($_SESSION['login'] ?? '') ?>">
 
-                    <label class="form-label small text-muted mb-1">Новый пароль (пусто, если не меняете)</label>
+                    <label class="form-label small text-muted mb-1">Пароль (оставьте поле пустым, если не хотите менять)</label>
                     <input id="profilePass" type="password" class="form-control form-control-sm mb-2" placeholder="********">
 
                     <button id="btnSaveProfileCreds" class="btn btn-primary btn-sm w-100 mt-1">Сохранить изменения</button>
