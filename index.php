@@ -130,8 +130,8 @@ require_once __DIR__ . '/config/auth.php';
                 <?php if (!is_logged_in()): ?>
                     <div class="card-ui mb-3 bg-light border-0">
                         <div class="small text-muted text-center py-2" style="font-size: 13px;">
-                            Хотите влиять на рейтинг вместимости? <br>
-                            <a href="#" class="fw-bold text-decoration-none" onclick="modalLogin.show(); return false;">Войдите</a> и укажите домашний адрес.
+                            Хотите указать количество парковочных мест? <br>
+                            <a href="#" class="fw-bold text-decoration-none" onclick="modalLogin.show(); return false;">Авторизуйтесь</a> и укажите домашний адрес.
                         </div>
                     </div>
                 <?php endif; ?>
@@ -192,7 +192,6 @@ require_once __DIR__ . '/config/auth.php';
     </div>
 </main>
 
-<!-- LOGIN MODAL -->
 <div class="modal fade" id="modalLogin" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content card-modal">
@@ -217,7 +216,6 @@ require_once __DIR__ . '/config/auth.php';
     </div>
 </div>
 
-<!-- REGISTER MODAL -->
 <div class="modal fade" id="modalRegister" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content card-modal">

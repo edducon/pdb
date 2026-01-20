@@ -40,9 +40,9 @@ function getClusterPreset(id) {
     return "islands#blueCircleDotIcon"; // Если данных нет
 }
 function getClusterText(id) {
-    if (id === 1) return "<span class='text-success fw-bold'>🟢 Благоприятная обстановка</span><br><small class='text-muted'>Достаточное количество мест, низкая конкуренция.</small>";
+    if (id === 1) return "<span class='text-success fw-bold'>🟢 Благоприятная обстановка</span><br><small class='text-muted'>Достаточное количество парковочных мест.</small>";
     if (id === 2) return "<span class='text-warning fw-bold'>🟡 Затрудненная парковка</span><br><small class='text-muted'>Высокий спрос в вечернее время.</small>";
-    if (id === 3) return "<span class='text-danger fw-bold'>🔴 Критический дефицит</span><br><small class='text-muted'>Систематическая нехватка мест, плотная застройка.</small>";
+    if (id === 3) return "<span class='text-danger fw-bold'>🔴 Критический дефицит</span><br><small class='text-muted'>Систематическая нехватка мест.</small>";
     return "<span class='text-muted'>⚪ Недостаточно данных</span><br><small class='text-muted'>Требуется сбор статистики.</small>";
 }
 
@@ -281,11 +281,27 @@ async function showPaidParkingsNear(){
             }
             const div = document.createElement("div");
             div.className = "item";
+
+            const yandexLink = `https://yandex.ru/maps/?rtext=~${p.lat},${p.lon}&rtt=auto`;
+
             div.innerHTML = `
-                <div class="t">${idx+1}. ${p.name || "Парковка"}</div>
-                <div class="s">${p.address || ""}</div>
-                <div class="s">~${p.dist_m} м • мест: ${p.capacity ?? "—"}</div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="t">${idx+1}. ${p.name || "Парковка"}</div>
+                        <div class="s">${p.address || ""}</div>
+                        <div class="s">~${p.dist_m} м • мест: ${p.capacity ?? "—"}</div>
+                    </div>
+                    <div class="ms-2">
+                        <a href="${yandexLink}" target="_blank" 
+                           class="btn btn-sm btn-outline-primary py-1 px-2" 
+                           style="font-size: 12px; white-space: nowrap; text-decoration: none;"
+                           onclick="event.stopPropagation()">
+                           Маршрут &rarr;
+                        </a>
+                    </div>
+                </div>
             `;
+
             div.onclick = () => {
                 if (map && typeof map.setCenter === 'function')
                     map.setCenter([p.lat, p.lon], Math.max(map.getZoom(), 16), {duration:300});

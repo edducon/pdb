@@ -23,7 +23,8 @@ $sql = "
   SELECT h.unom, h.address_simple, h.lon, h.lat, d.cluster_id
   FROM houses h
   LEFT JOIN daily_house_features d ON h.unom = d.unom AND d.date = '$today'
-  WHERE h.lon BETWEEN $minLon AND $maxLon
+  WHERE h.obj_type = 'Здание' 
+    AND h.lon BETWEEN $minLon AND $maxLon
     AND h.lat BETWEEN $minLat AND $maxLat
   LIMIT ?
 ";
